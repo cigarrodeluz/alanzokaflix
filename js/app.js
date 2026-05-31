@@ -299,6 +299,7 @@ function showView(v) {
 document.querySelectorAll('.nav-links a[href="#acervo"]').forEach(a => a.onclick = e => { e.preventDefault(); showView('browse'); });
 document.querySelectorAll('.nav-links a[href="#rows"]').forEach(a => a.onclick = e => { e.preventDefault(); showView('home'); });
 $('.brand').onclick = e => { e.preventDefault(); showView('home'); };
+$('#nav-search').addEventListener('click', () => { showView('browse'); $('#search').focus(); });
 
 addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', view === 'browse' || scrollY > 60);
