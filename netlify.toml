@@ -1,0 +1,9 @@
+[build]
+  publish = "."
+  command = ""
+
+# SPA: serve sempre o index (caso adicione rotas no futuro)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

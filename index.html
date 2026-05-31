@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Acervo completo e interativo de TODOS os vídeos dos dois canais do alanzoka, com cara de streaming. Assista sem sair do site." />
+<title>alanzoka • acervo</title>
+<link rel="preconnect" href="https://i.ytimg.com" />
+<link rel="preconnect" href="https://www.youtube.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<!-- tela de login/cadastro (estilo Netflix) -->
+<div class="auth" id="auth" hidden>
+  <div class="mosaic" id="mosaic" aria-hidden="true"></div>
+  <div class="auth-veil"></div>
+  <header class="auth-top"><span class="brand">alan<span>zoka</span></span></header>
+  <div class="auth-card">
+    <h1 id="auth-title">Entrar</h1>
+    <form id="auth-form" autocomplete="off">
+      <input type="email" id="auth-email" placeholder="Email" required />
+      <input type="password" id="auth-pass" placeholder="Senha" required minlength="4" />
+      <button type="submit" class="auth-primary" id="auth-submit">Entrar</button>
+      <div class="auth-or"><span>OU</span></div>
+      <button type="button" class="auth-google" id="auth-google">
+        <svg class="g-ico" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.1 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.8 6c1.9-5.6 7.1-9.8 13.7-9.8z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.7-9.9 6.7-17.4z"/><path fill="#FBBC05" d="M10.3 28.3c-.5-1.4-.7-2.9-.7-4.3s.3-3 .7-4.3l-7.8-6C.9 16.9 0 20.3 0 24s.9 7.1 2.5 10.3l7.8-6z"/><path fill="#34A853" d="M24 48c6.1 0 11.3-2 15-5.5l-7.3-5.7c-2 1.4-4.7 2.3-7.7 2.3-6.6 0-11.8-4.2-13.7-9.8l-7.8 6C6.4 42.6 14.6 48 24 48z"/></svg>
+        Entrar com Google
+      </button>
+    </form>
+    <p class="auth-switch"><span id="auth-lead">Novo por aqui?</span> <a href="#" id="auth-toggle">Cadastre-se agora</a>.</p>
+    <p class="auth-msg" id="auth-msg"></p>
+    <p class="auth-note">Login real via Supabase. Nada além de email/senha é armazenado.</p>
+  </div>
+</div>
+
+<header class="nav" id="nav">
+  <a class="brand" href="#topo">alan<span>zoka</span></a>
+  <nav class="nav-links">
+    <a href="#rows">Início</a>
+    <a href="#acervo">Explorar tudo</a>
+    <a href="https://www.youtube.com/@alanzoka" target="_blank" rel="noopener">Canal</a>
+    <a href="https://www.youtube.com/@livesalanzoka" target="_blank" rel="noopener">Lives</a>
+  </nav>
+  <button class="btn-rand" id="surprise-top" title="Vídeo aleatório">🎲</button>
+  <button class="btn-sair" id="logout">Sair</button>
+</header>
+
+<main id="topo">
+  <!-- billboard preenchido pelo JS -->
+  <section class="billboard" id="billboard" aria-label="Destaque"></section>
+
+  <!-- carrosséis preenchidos pelo JS -->
+  <div class="rows" id="rows"></div>
+
+  <!-- acervo completo, pesquisável (tela própria) -->
+  <section class="browse" id="acervo" hidden>
+    <div class="browse-head">
+      <h2>Explorar tudo</h2>
+      <p class="result-info" id="result-info">Carregando…</p>
+    </div>
+    <div class="controls" id="controls">
+      <div class="search-wrap">
+        <svg class="search-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.3-4.3M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>
+        <input type="search" id="search" placeholder="Buscar vídeos, séries e temas…" autocomplete="off" />
+      </div>
+      <div class="seg" id="channel-filter" role="tablist" aria-label="Filtrar por canal">
+        <button class="seg-btn active" data-ch="all">Todos</button>
+        <button class="seg-btn" data-ch="main">alanzoka</button>
+        <button class="seg-btn" data-ch="lives">Lives</button>
+      </div>
+      <select id="sort" class="select" aria-label="Ordenar">
+        <option value="size">Maiores grupos</option>
+        <option value="az">Ordem alfabética</option>
+      </select>
+    </div>
+    <div class="explore" id="grid" aria-live="polite"></div>
+    <div id="sentinel" class="sentinel"></div>
+    <p class="end-note" id="end-note" hidden>Você chegou ao fim. 🎮</p>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>Projeto de fã. Vídeos e thumbnails pertencem ao <a href="https://www.youtube.com/@alanzoka" target="_blank" rel="noopener">alanzoka</a> e ao YouTube.</p>
+  <p class="foot-small" id="foot-gen"></p>
+</footer>
+
+<!-- detalhe estilo streaming -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-label="Detalhes do vídeo">
+    <button class="modal-close" id="modal-close" aria-label="Fechar">✕</button>
+    <div class="modal-player" id="modal-player"></div>
+    <div class="modal-body">
+      <div class="modal-info">
+        <h3 id="modal-title">—</h3>
+        <div class="modal-meta" id="modal-meta"></div>
+        <a id="modal-yt" class="btn-watch" target="_blank" rel="noopener">▶ Assistir no YouTube</a>
+        <button id="desc-toggle" class="btn-desc" hidden>Mostrar descrição ▾</button>
+        <div id="modal-desc" class="modal-desc" hidden></div>
+      </div>
+      <h4 class="related-h" id="related-h">Mais como este</h4>
+      <div class="related" id="related"></div>
+    </div>
+  </div>
+</div>
+
+<button class="to-top" id="to-top" aria-label="Voltar ao topo" hidden>↑</button>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js" defer></script>
+</body>
+</html>
