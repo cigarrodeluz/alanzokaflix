@@ -4,6 +4,8 @@ const grid = $('#grid'), info = $('#result-info'), sentinel = $('#sentinel'), en
 const MAXTRACK = 80, ROWBATCH = 6;
 let ALL = [], idMap = new Map(), SECTIONS = [], exVisible = [], exRendered = 0;
 let GROUPS = {}, VID2G = {}, META = {};
+let ME = null, ytp = null, ytReady = false, curId = null, progTimer = null;
+const PROG = new Map();
 let state = { q: '', qraw: '', ch: 'all', sort: 'size' };
 
 /* ---------- helpers ---------- */
@@ -37,7 +39,7 @@ Promise.all([
   $('#search').placeholder = `Buscar entre ${ALL.length.toLocaleString('pt-BR')} vídeos…`;
   if (data.generatedAt) $('#foot-gen').textContent =
     'Acervo atualizado em ' + new Date(data.generatedAt).toLocaleDateString('pt-BR');
-  buildBillboard(); buildRows(); buildSections(); apply();
+  buildBillboard(); buildRows(); buildSections(); apply(); renderContinue();
   if (!auth.hidden) buildMosaic();
 }).catch(() => { info.textContent = 'Não foi possível carregar o acervo (data/videos.json).'; });
 
@@ -183,12 +185,57 @@ $('#channel-filter').addEventListener('click', e => {
 });
 $('#sort').addEventListener('change', e => { state.sort = e.target.value; apply(); });
 
-/* ---------- detail modal (player + meta + related) ---------- */
+/* ---------- player + progresso (YouTube IFrame API) ---------- */
 const modal = $('#modal'), player = $('#modal-player');
+window.onYouTubeIframeAPIReady = () => { ytReady = true; };
+(function () { const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s); })();
+function onYtState(e) { if (e.data === 1) startProgTimer(); else { stopProgTimer(); saveProg(); } }
+function startProgTimer() { stopProgTimer(); progTimer = setInterval(saveProg, 5000); }
+function stopProgTimer() { if (progTimer) clearInterval(progTimer); progTimer = null; }
+function saveProg() {
+  if (!ytp || !curId || !ytp.getCurrentTime) return;
+  const pos = ytp.getCurrentTime() || 0, dur = ytp.getDuration() || (idMap.get(curId) || {}).d || 0;
+  if (dur > 0 && pos > 0) upsertProg(curId, pos, dur);
+}
+async function loadProg() {
+  if (!ME) return;
+  const { data } = await sb.from('watch_progress').select('video_id,position,duration,updated_at').order('updated_at', { ascending: false });
+  PROG.clear(); (data || []).forEach(r => PROG.set(r.video_id, r)); renderContinue();
+}
+function upsertProg(id, position, duration) {
+  if (!ME) return;
+  const row = { user_id: ME.id, video_id: id, position, duration, updated_at: new Date().toISOString() };
+  PROG.set(id, row); sb.from('watch_progress').upsert(row).then(() => {});
+}
+const contCard = (v, pct) => `<article class="rcard" data-id="${v.id}">
+  <img loading="lazy" decoding="async" src="${thumb(v.id)}" alt="" onload="${onload}" onerror="this.style.opacity=1">
+  ${v.d ? `<span class="r-badge">${fmtDur(v.d)}</span>` : ''}
+  <span class="r-play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="rgba(229,9,20,.95)"/><path d="M10 8l6 4-6 4z" fill="#fff"/></svg></span>
+  <div class="rcard-grad"><span class="t">${esc(v.t)}</span><span class="m">${metaHtml(v)}</span></div>
+  <div class="prog"><i style="width:${pct}%"></i></div></article>`;
+function renderContinue() {
+  const rows = $('#rows'); if (!rows || !ALL.length) return;
+  const old = $('#cont-row'); if (old) old.remove();
+  const items = [...PROG.values()]
+    .filter(r => r.duration > 0 && r.position > 15 && r.position < r.duration * 0.95)
+    .sort((a, b) => a.updated_at < b.updated_at ? 1 : -1)
+    .map(r => ({ v: idMap.get(r.video_id), pct: Math.min(100, Math.round(r.position / r.duration * 100)) }))
+    .filter(x => x.v).slice(0, 20);
+  if (!items.length) return;
+  const row = document.createElement('section');
+  row.className = 'row'; row.id = 'cont-row';
+  row.innerHTML = `<h2 class="row-title">Continuar assistindo</h2>
+    <div class="row-wrap"><button class="arrow l" aria-label="Anterior">‹</button>
+    <div class="track">${items.map(x => contCard(x.v, x.pct)).join('')}</div>
+    <button class="arrow r" aria-label="Próximo">›</button></div>`;
+  const tr = row.querySelector('.track');
+  row.querySelector('.arrow.l').onclick = () => tr.scrollBy({ left: -tr.clientWidth * .85 });
+  row.querySelector('.arrow.r').onclick = () => tr.scrollBy({ left: tr.clientWidth * .85 });
+  rows.prepend(row);
+}
 function open(v) {
   if (!v) return;
-  player.innerHTML = `<iframe src="https://www.youtube.com/embed/${v.id}?autoplay=1&rel=0&modestbranding=1"
-    allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>`;
+  curId = v.id;
   $('#modal-title').textContent = v.t;
   const date = metaDate(v.id);
   $('#modal-meta').innerHTML = `<span class="green">${fmtViews(v.v) || 'Vídeo'}</span>` +
@@ -213,8 +260,22 @@ function open(v) {
   }
   modal.hidden = false; modal.scrollTop = 0; document.body.style.overflow = 'hidden';
   const sel = rl.querySelector('.ep-sel'); if (sel) rl.scrollTop = sel.offsetTop - rl.clientHeight / 2;
+  const startAt = Math.floor((PROG.get(v.id) || {}).position || 0);
+  player.innerHTML = '<div id="ytp"></div>';
+  if (ytReady && window.YT && YT.Player) {
+    ytp = new YT.Player('ytp', { videoId: v.id, playerVars: { autoplay: 1, rel: 0, modestbranding: 1, start: startAt },
+      events: { onReady: e => e.target.playVideo(), onStateChange: onYtState } });
+  } else {
+    player.innerHTML = `<iframe src="https://www.youtube.com/embed/${v.id}?autoplay=1&rel=0&modestbranding=1&start=${startAt}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>`;
+  }
 }
-function close() { modal.hidden = true; player.innerHTML = ''; document.body.style.overflow = ''; }
+function close() {
+  saveProg(); stopProgTimer();
+  if (ytp && ytp.destroy) { try { ytp.destroy(); } catch (e) {} }
+  ytp = null; curId = null;
+  modal.hidden = true; player.innerHTML = ''; document.body.style.overflow = '';
+  renderContinue();
+}
 $('#desc-toggle').addEventListener('click', () => {
   const dd = $('#modal-desc'), open = dd.hidden;
   dd.hidden = !open; $('#desc-toggle').textContent = open ? 'Ocultar descrição ▴' : 'Mostrar descrição ▾';
@@ -225,8 +286,7 @@ $('#modal-close').addEventListener('click', close);
 $('#modal-backdrop').addEventListener('click', close);
 addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) close(); });
 
-/* ---------- random + view switching + nav ---------- */
-$('#surprise-top').addEventListener('click', () => open(ALL[Math.random() * ALL.length | 0]));
+/* ---------- view switching + nav ---------- */
 const nav = $('#nav'), toTop = $('#to-top');
 const billboard = $('#billboard'), rowsEl = $('#rows'), acervo = $('#acervo');
 let view = 'home';
@@ -262,8 +322,15 @@ function buildMosaic() {
 function showAuth(b) { auth.hidden = !b; document.body.style.overflow = b ? 'hidden' : ''; if (b) buildMosaic(); }
 function authMsg(t, err) { const m = $('#auth-msg'); m.textContent = t || ''; m.classList.toggle('err', !!err); }
 
-sb.auth.getSession().then(({ data }) => showAuth(!data.session));
-sb.auth.onAuthStateChange((_e, session) => { if (session) { authMsg(''); showAuth(false); } });
+function setUser(u) {
+  ME = u || null;
+  const a = $('#nav-avatar'); if (!a) return;
+  const pic = u && (u.user_metadata && (u.user_metadata.avatar_url || u.user_metadata.picture));
+  if (pic) a.innerHTML = `<img src="${pic}" alt="" referrerpolicy="no-referrer">`;
+  else a.textContent = (((u && u.email) || '?').trim()[0] || '?').toUpperCase();
+}
+sb.auth.getSession().then(({ data }) => { showAuth(!data.session); if (data.session) { setUser(data.session.user); loadProg(); } });
+sb.auth.onAuthStateChange((_e, session) => { if (session) { authMsg(''); showAuth(false); setUser(session.user); loadProg(); } });
 
 $('#auth-form').addEventListener('submit', async e => {
   e.preventDefault();
@@ -290,4 +357,4 @@ $('#auth-toggle').addEventListener('click', e => {
   $('#auth-toggle').textContent = login ? 'Cadastre-se agora' : 'Entre';
   authMsg('');
 });
-$('#logout').addEventListener('click', async () => { await sb.auth.signOut(); showAuth(true); });
+$('#logout').addEventListener('click', async () => { await sb.auth.signOut(); ME = null; PROG.clear(); const c = $('#cont-row'); if (c) c.remove(); showAuth(true); });
