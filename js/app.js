@@ -231,7 +231,8 @@ function renderContinue() {
   const tr = row.querySelector('.track');
   row.querySelector('.arrow.l').onclick = () => tr.scrollBy({ left: -tr.clientWidth * .85 });
   row.querySelector('.arrow.r').onclick = () => tr.scrollBy({ left: tr.clientWidth * .85 });
-  rows.prepend(row);
+  const kids = [...rows.children];
+  if (kids[2]) rows.insertBefore(row, kids[2]); else rows.appendChild(row);
 }
 function open(v) {
   if (!v) return;
