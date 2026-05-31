@@ -20,7 +20,7 @@ h2,h3,h4{font-weight:800;letter-spacing:-.3px}
 .nav.scrolled{background:#0b0b0b}
 .brand{font-weight:900;font-size:1.6rem;letter-spacing:-1px;color:var(--red)}
 .brand span{color:var(--txt)}
-.nav-links{display:flex;gap:20px;margin-left:14px;font-size:.92rem;color:var(--muted)}
+.nav-links{display:flex;gap:20px;margin-left:auto;font-size:.92rem;color:var(--muted)}
 .nav-links a{transition:color .2s}.nav-links a:hover{color:#fff}
 .btn-rand{margin-left:auto;background:rgba(255,255,255,.1);border:none;color:#fff;width:42px;height:42px;
   border-radius:50%;font-size:1.1rem;cursor:pointer;transition:.2s}
@@ -132,7 +132,8 @@ h2,h3,h4{font-weight:800;letter-spacing:-.3px}
 /* ---------- modal (netflix detail) ---------- */
 .modal{position:fixed;inset:0;z-index:100;display:grid;place-items:start center;padding:48px 16px;overflow-y:auto}
 .modal[hidden]{display:none}
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.78);animation:fade .3s}
+.modal-backdrop{position:fixed;inset:0;background:#000;animation:bdDark .65s ease forwards}
+@keyframes bdDark{from{background:rgba(0,0,0,.12)}to{background:rgba(0,0,0,1)}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .modal-box{position:relative;width:min(900px,100%);background:#181818;border-radius:10px;overflow:hidden;
   box-shadow:0 30px 80px -10px rgba(0,0,0,.9);animation:popIn .35s cubic-bezier(.2,.8,.3,1)}
