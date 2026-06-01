@@ -250,6 +250,7 @@ function renderContinue() {
 function open(v) {
   if (!v) return;
   curId = v.id;
+  const loading = $('#modal-loading'); loading.classList.add('show');
   $('#modal-title').textContent = v.t;
   const date = metaDate(v.id);
   $('#modal-meta').innerHTML = `<span class="green">${fmtViews(v.v) || 'Vídeo'}</span>` +
@@ -282,9 +283,10 @@ function open(v) {
   player.innerHTML = '<div id="ytp"></div>';
   if (ytReady && window.YT && YT.Player) {
     ytp = new YT.Player('ytp', { videoId: v.id, playerVars: { autoplay: 1, rel: 0, modestbranding: 1, start: startAt },
-      events: { onReady: e => e.target.playVideo(), onStateChange: onYtState } });
+      events: { onReady: e => { e.target.playVideo(); $('#modal-loading').classList.remove('show'); }, onStateChange: onYtState } });
   } else {
     player.innerHTML = `<iframe src="https://www.youtube.com/embed/${v.id}?autoplay=1&rel=0&modestbranding=1&start=${startAt}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>`;
+    setTimeout(() => $('#modal-loading').classList.remove('show'), 800);
   }
 }
 function close() {
