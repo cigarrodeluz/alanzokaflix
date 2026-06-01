@@ -281,11 +281,8 @@ function open(v) {
   // relacionados: mesma série em lista vertical (mais antigo no topo); senão aleatório
   const g = GROUPS[VID2G[v.id]], rl = $('#related');
   if (g && g.ids.length > 1) {
-    rl.className = 'related';
-    rl.innerHTML = g.ids.map(id => {
-      const x = idMap.get(id);
-      return `<article class="card rcard" data-id="${x.id}">${card(x)}</article>`;
-    }).join('');
+    rl.className = 'related ep-list';
+    rl.innerHTML = g.ids.map(id => ep(idMap.get(id), id === v.id)).join('');
   } else {
     rl.className = 'related';
     rl.innerHTML = [...ALL].sort(() => Math.random() - .5).slice(0, 12)
