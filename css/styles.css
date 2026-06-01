@@ -152,6 +152,9 @@ h2,h3,h4{font-weight:800;letter-spacing:-.3px}
 .btn-watch{display:inline-flex;align-items:center;gap:8px;background:var(--red);color:#fff;font-weight:700;
   padding:11px 26px;border-radius:5px;transition:.2s}
 .btn-watch:hover{background:var(--red-h)}
+.btn-vaq{display:inline-flex;align-items:center;gap:8px;background:#1db954;color:#fff;font-weight:700;
+  padding:11px 26px;border-radius:5px;transition:.2s;margin-left:10px}
+.btn-vaq:hover{background:#1ed760}
 .btn-desc{display:inline-block;margin-left:10px;background:transparent;border:1px solid var(--line);color:var(--muted);
   font-family:inherit;font-weight:600;font-size:.9rem;padding:11px 18px;border-radius:5px;cursor:pointer;transition:.2s}
 .btn-desc:hover{color:#fff;border-color:#fff}

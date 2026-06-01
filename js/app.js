@@ -19,7 +19,7 @@ const fmtDur = s => {
 };
 const fmtDate = s => /^\d{8}$/.test(s || '') ? `${s.slice(6, 8)}/${s.slice(4, 6)}/${s.slice(0, 4)}` : '';
 const metaDate = id => fmtDate(META[id] && META[id][0]);
-const chName = c => c === 'lives' ? 'Lives do alanzoka' : 'alanzoka';
+const chName = c => c === 'lives' ? 'Lives do alanzoka' : c === 'pixel' ? 'PIXEL STUDIO' : 'alanzoka';
 const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const linkify = s => esc(s).replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
@@ -256,6 +256,10 @@ function open(v) {
     (date ? `<span>${date}</span>` : '') + `<span class="pill">${chName(v.c)}</span>` +
     (v.d ? `<span>${fmtDur(v.d)}</span>` : '');
   $('#modal-yt').href = 'https://www.youtube.com/watch?v=' + v.id;
+  const isPixel = v.c === 'pixel';
+  const vaq = $('#modal-vaq');
+  if (isPixel) { vaq.hidden = false; vaq.href = 'https://www.vakinha.com.br/6121811'; }
+  else vaq.hidden = true;
   const desc = META[v.id] && META[v.id][1], dt = $('#desc-toggle'), dd = $('#modal-desc');
   dd.hidden = true; dt.textContent = 'Mostrar descrição ▾';
   dt.hidden = !desc;
