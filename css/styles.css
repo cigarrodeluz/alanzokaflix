@@ -139,15 +139,15 @@ h2,h3,h4{font-weight:800;letter-spacing:-.3px}
 .modal-backdrop{position:fixed;inset:0;background:#000;animation:bdDark .65s ease forwards}
 @keyframes bdDark{from{background:rgba(0,0,0,.12)}to{background:rgba(0,0,0,1)}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-.modal-box{position:relative;width:min(900px,100%);background:#0b0b0b;border-radius:10px;overflow:hidden;
+.modal-box{position:relative;isolation:isolate;width:min(900px,100%);background:#0b0b0b;border-radius:10px;overflow:hidden;
   box-shadow:0 30px 80px -10px rgba(0,0,0,.9);opacity:0;transform:scale(.96) translateY(16px);transition:opacity .3s,transform .3s}
 .modal-box.show{opacity:1;transform:none}
-.modal-close{position:absolute;top:14px;right:14px;z-index:3;width:38px;height:38px;border-radius:50%;border:none;
-  background:#0b0b0b;color:#fff;font-size:1rem;cursor:pointer;transition:.2s}
+.modal-close{position:absolute;top:14px;right:14px;z-index:30;width:42px;height:42px;border-radius:50%;border:none;
+  display:grid;place-items:center;background:#0b0b0b;color:#fff;font-size:1.1rem;cursor:pointer;transition:.2s;pointer-events:auto}
 .modal-close:hover{background:var(--red)}
-.modal-player{aspect-ratio:16/9;background:#000;position:relative}
+.modal-player{aspect-ratio:16/9;background:#000;position:relative;z-index:1}
 .modal-player::after{content:"";position:absolute;inset:auto 0 0;height:90px;background:linear-gradient(0deg,#0b0b0b,transparent);pointer-events:none}
-.modal-player iframe,.modal-player #ytp{width:100%;height:100%;border:0;display:block}
+.modal-player iframe,.modal-player #ytp{position:relative;z-index:1;width:100%;height:100%;border:0;display:block}
 .modal-body{padding:20px 24px 32px}
 .modal-title{font-size:1.75rem;font-weight:700;margin:0 0 12px;line-height:1.2}
 .modal-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 20px;color:var(--muted);font-size:.95rem}
@@ -188,6 +188,7 @@ h2,h3,h4{font-weight:800;letter-spacing:-.3px}
 .modal-desc a{color:#7aa7ff;text-decoration:underline}
 .related-h{font-size:1.15rem;margin:30px 0 16px}
 .related{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.related .card{border:none;color:inherit;font:inherit;text-align:left;width:100%}
 .related .rcard{aspect-ratio:16/9}
 /* lista de episódios estilo Netflix */
 .ep-list{display:block;position:relative;max-height:460px;overflow-y:auto;padding-right:6px}

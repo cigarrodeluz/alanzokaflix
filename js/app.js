@@ -1,11 +1,15 @@
 'use strict';
 const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
 const grid = $('#grid'), info = $('#result-info'), sentinel = $('#sentinel'), endNote = $('#end-note');
 const MAXTRACK = 80, ROWBATCH = 6;
 let ALL = [], idMap = new Map(), SECTIONS = [], exVisible = [], exRendered = 0;
 let GROUPS = {}, VID2G = {}, META = {};
 let ME = null, ytp = null, ytReady = false, curId = null, progTimer = null;
 const PROG = new Map();
+const HIST = new Map();
+const HISTORY_KEY = 'alanzokaflix:watch-history';
+const HISTORY_LIMIT = 80;
 let state = { q: '', qraw: '', ch: 'all', sort: 'size' };
 
 /* ---------- helpers ---------- */
@@ -27,6 +31,52 @@ const thumb = (id, hq) => `https://i.ytimg.com/vi/${id}/${hq ? 'maxresdefault' :
 const onload = "this.classList.add('loaded');this.parentNode.classList.add('done')";
 const metaHtml = v => [chName(v.c), fmtViews(v.v), metaDate(v.id)].filter(Boolean)
   .map(x => `<span>${x}</span>`).join('<span class="dot"></span>');
+
+function loadLocalHistory() {
+  HIST.clear();
+  try {
+    const rows = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    if (Array.isArray(rows)) rows.forEach(r => { if (r && r.video_id) HIST.set(r.video_id, r); });
+  } catch (e) {}
+}
+function persistLocalHistory() {
+  try {
+    const rows = [...HIST.values()]
+      .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
+      .slice(0, HISTORY_LIMIT);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(rows));
+    HIST.clear(); rows.forEach(r => HIST.set(r.video_id, r));
+  } catch (e) {}
+}
+function rememberWatch(id, position = 0, duration = 0) {
+  if (!id) return;
+  const old = PROG.get(id) || HIST.get(id) || {};
+  const v = idMap.get(id);
+  const row = {
+    video_id: id,
+    position: Math.max(Number(position) || 0, Number(old.position) || 0),
+    duration: Number(duration) || Number(old.duration) || (v && v.d) || 0,
+    updated_at: new Date().toISOString(),
+  };
+  HIST.set(id, row);
+  persistLocalHistory();
+}
+function mergedWatchRows() {
+  const rows = new Map();
+  [...HIST.values()].forEach(r => { if (r && r.video_id) rows.set(r.video_id, r); });
+  [...PROG.values()].forEach(r => {
+    if (!r || !r.video_id) return;
+    const old = rows.get(r.video_id) || {};
+    rows.set(r.video_id, { ...old, ...r, updated_at: r.updated_at || old.updated_at });
+  });
+  return [...rows.values()];
+}
+function removeContinueRow() {
+  const c = $('#cont-row');
+  if (c) c.remove();
+}
+
+loadLocalHistory();
 
 /* ---------- data ---------- */
 Promise.all([
@@ -57,7 +107,7 @@ function buildBillboard() {
       <button class="bb-play" data-id="${v.id}">▶ Assistir</button>
       <button class="bb-info-btn" data-id="${v.id}">ⓘ Mais informações</button>
     </div></div>`;
-  bb.querySelectorAll('[data-id]').forEach(b => b.onclick = () => open(idMap.get(v.id)));
+  bb.querySelectorAll('[data-id]').forEach(b => b.onclick = () => openVideoModal(idMap.get(v.id)));
 }
 
 /* ---------- carousels (shared row builder) ---------- */
@@ -185,7 +235,7 @@ function ep(v, sel) {
 }
 
 new IntersectionObserver(e => { if (e[0].isIntersecting && exRendered) renderNext(); }, { rootMargin: '700px' }).observe(sentinel);
-$('#rows').addEventListener('click', e => { const r = e.target.closest('.rcard'); if (r) open(idMap.get(r.dataset.id)); });
+$('#rows').addEventListener('click', e => { const r = e.target.closest('.rcard'); if (r) openVideoModal(idMap.get(r.dataset.id)); });
 
 /* ---------- controls ---------- */
 let t; $('#search').addEventListener('input', e => {
@@ -211,11 +261,16 @@ function saveProg() {
   if (dur > 0 && pos > 0) upsertProg(curId, pos, dur);
 }
 async function loadProg() {
-  if (!ME) return;
-  const { data } = await sb.from('watch_progress').select('video_id,position,duration,updated_at').order('updated_at', { ascending: false });
-  PROG.clear(); (data || []).forEach(r => PROG.set(r.video_id, r)); renderContinue();
+  loadLocalHistory();
+  if (!ME) { renderContinue(); return; }
+  try {
+    const { data } = await sb.from('watch_progress').select('video_id,position,duration,updated_at').order('updated_at', { ascending: false });
+    PROG.clear(); (data || []).forEach(r => PROG.set(r.video_id, r));
+  } catch (e) {}
+  renderContinue();
 }
 function upsertProg(id, position, duration) {
+  rememberWatch(id, position, duration);
   if (!ME) return;
   const row = { user_id: ME.id, video_id: id, position, duration, updated_at: new Date().toISOString() };
   PROG.set(id, row); sb.from('watch_progress').upsert(row).then(() => {});
@@ -228,11 +283,22 @@ const contCard = (v, pct) => `<article class="rcard" data-id="${v.id}">
   <div class="prog"><i style="width:${pct}%"></i></div></article>`;
 function renderContinue() {
   const rows = $('#rows'); if (!rows || !ALL.length) return;
-  const old = $('#cont-row'); if (old) old.remove();
-  const items = [...PROG.values()]
-    .filter(r => r.duration > 0 && r.position > 15 && r.position < r.duration * 0.95)
+  removeContinueRow();
+  const items = mergedWatchRows()
+    .filter(r => idMap.has(r.video_id))
+    .filter(r => {
+      const v = idMap.get(r.video_id);
+      const dur = Number(r.duration) || (v && v.d) || 0;
+      const pos = Number(r.position) || 0;
+      return !dur || pos < dur * 0.95;
+    })
     .sort((a, b) => a.updated_at < b.updated_at ? 1 : -1)
-    .map(r => ({ v: idMap.get(r.video_id), pct: Math.min(100, Math.round(r.position / r.duration * 100)) }))
+    .map(r => {
+      const v = idMap.get(r.video_id);
+      const dur = Number(r.duration) || (v && v.d) || 0;
+      const pct = dur ? Math.min(100, Math.round((Number(r.position) || 0) / dur * 100)) : 0;
+      return { v, pct };
+    })
     .filter(x => x.v).slice(0, 20);
   if (!items.length) return;
   const row = document.createElement('section');
@@ -247,11 +313,21 @@ function renderContinue() {
   const kids = [...rows.children];
   if (kids[2]) rows.insertBefore(row, kids[2]); else rows.appendChild(row);
 }
-function open(v) {
+function openVideoModal(v) {
   if (!v) return;
+  if (curId && curId !== v.id) { try { saveProg(); } catch (e) {} }
   curId = v.id;
+  const saved = PROG.get(v.id) || HIST.get(v.id) || {};
+  const savedPos = Number(saved.position) || 0;
+  const savedDur = Number(saved.duration) || v.d || 0;
+  if (ME) upsertProg(v.id, Math.max(1, savedPos), savedDur);
+  else rememberWatch(v.id, savedPos, savedDur);
+  renderContinue();
   const loading = $('#modal-loading'); loading.classList.add('show');
   const modalBox = $('.modal-box'); modalBox.classList.remove('show');
+  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'episodes'));
+  $('#tab-episodes').hidden = false;
+  $('#tab-similar').hidden = true;
   $('#modal-title').textContent = v.t;
   const date = metaDate(v.id);
   $('#modal-meta').innerHTML = `<span class="green">${fmtViews(v.v) || 'Vídeo'}</span>` +
@@ -280,16 +356,20 @@ function open(v) {
   } else dd.innerHTML = '';
   // relacionados: mesma série em lista vertical (mais antigo no topo); senão aleatório
   const g = GROUPS[VID2G[v.id]], rl = $('#related');
+  const recHtml = [...ALL].filter(x => x.id !== v.id).sort(() => Math.random() - .5).slice(0, 12)
+    .map(x => `<button type="button" class="card" data-id="${x.id}">${card(x)}</button>`).join('');
+  $('#tab-similar').innerHTML = `<div class="related">${recHtml}</div>`;
   if (g && g.ids.length > 1) {
     rl.className = 'related ep-list';
     rl.innerHTML = g.ids.map(id => ep(idMap.get(id), id === v.id)).join('');
   } else {
     rl.className = 'related';
-    rl.innerHTML = [...ALL].sort(() => Math.random() - .5).slice(0, 12)
-      .map(x => `<article class="card rcard" data-id="${x.id}">${card(x)}</article>`).join('');
+    rl.innerHTML = recHtml;
   }
   modal.hidden = false; modal.scrollTop = 0; document.body.style.overflow = 'hidden';
   const startAt = Math.floor((PROG.get(v.id) || {}).position || 0);
+  if (ytp && ytp.destroy) { try { ytp.destroy(); } catch (e) {} }
+  ytp = null;
   player.innerHTML = '<div id="ytp"></div>';
   if (ytReady && window.YT && YT.Player) {
     ytp = new YT.Player('ytp', { videoId: v.id, playerVars: { autoplay: 1, rel: 0, modestbranding: 1, start: startAt },
@@ -299,22 +379,35 @@ function open(v) {
     setTimeout(() => { $('#modal-loading').classList.remove('show'); setTimeout(() => $('.modal-box').classList.add('show'), 100); }, 800);
   }
 }
-function close() {
-  saveProg(); stopProgTimer();
+function closeVideoModal() {
+  try { saveProg(); } catch (e) {}
+  stopProgTimer();
   if (ytp && ytp.destroy) { try { ytp.destroy(); } catch (e) {} }
   ytp = null; curId = null;
   modal.hidden = true; player.innerHTML = ''; document.body.style.overflow = '';
   renderContinue();
 }
-$('#desc-toggle').addEventListener('click', () => {
-  const dd = $('#modal-desc'), open = dd.hidden;
-  dd.hidden = !open; $('#desc-toggle').textContent = open ? 'Ocultar descrição ▴' : 'Mostrar descrição ▾';
+const descToggle = $('#desc-toggle');
+if (descToggle) descToggle.addEventListener('click', () => {
+  const dd = $('#modal-desc'), willOpen = dd.hidden;
+  dd.hidden = !willOpen; descToggle.textContent = willOpen ? 'Ocultar descrição ▴' : 'Mostrar descrição ▾';
 });
-$('#related').addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (c) open(idMap.get(c.dataset.id)); });
-grid.addEventListener('click', e => { const c = e.target.closest('.rcard'); if (c) open(idMap.get(c.dataset.id)); });
-$('#modal-close').addEventListener('click', close);
-$('#modal-backdrop').addEventListener('click', close);
-addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) close(); });
+$('#related').addEventListener('click', e => {
+  const c = e.target.closest('[data-id]');
+  if (!c) return;
+  e.preventDefault();
+  openVideoModal(idMap.get(c.dataset.id));
+});
+grid.addEventListener('click', e => { const c = e.target.closest('.rcard'); if (c) openVideoModal(idMap.get(c.dataset.id)); });
+$('#modal-close').addEventListener('click', closeVideoModal);
+$('#modal-backdrop').addEventListener('click', closeVideoModal);
+document.addEventListener('click', e => {
+  const closeBtn = e.target.closest('[data-modal-close],#modal-close');
+  if (closeBtn) { e.preventDefault(); e.stopPropagation(); closeVideoModal(); return; }
+  const related = e.target.closest('#related [data-id],#tab-similar [data-id]');
+  if (related) { e.preventDefault(); e.stopPropagation(); openVideoModal(idMap.get(related.dataset.id)); }
+}, true);
+addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeVideoModal(); });
 // tabs modal
 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
   $$('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -364,12 +457,47 @@ function authMsg(t, err) { const m = $('#auth-msg'); m.textContent = t || ''; m.
 function setUser(u) {
   ME = u || null;
   const a = $('#nav-avatar'); if (!a) return;
+  if (!u) { a.innerHTML = ''; a.textContent = ''; return; }
   const pic = u && (u.user_metadata && (u.user_metadata.avatar_url || u.user_metadata.picture));
   if (pic) a.innerHTML = `<img src="${pic}" alt="" referrerpolicy="no-referrer">`;
   else a.textContent = (((u && u.email) || '?').trim()[0] || '?').toUpperCase();
 }
-sb.auth.getSession().then(({ data }) => { showAuth(!data.session); if (data.session) { setUser(data.session.user); loadProg(); } });
-sb.auth.onAuthStateChange((_e, session) => { if (session) { authMsg(''); showAuth(false); setUser(session.user); loadProg(); } });
+function clearSupabaseLocalSession() {
+  try {
+    const ref = new URL(window.SUPABASE_URL).hostname.split('.')[0];
+    [localStorage, sessionStorage].forEach(store => {
+      Object.keys(store).forEach(k => {
+        if (k === 'supabase.auth.token' || k === `sb-${ref}-auth-token` || k.startsWith(`sb-${ref}-`)) store.removeItem(k);
+      });
+    });
+  } catch (e) {}
+}
+function clearSessionUi() {
+  ME = null;
+  PROG.clear();
+  setUser(null);
+  removeContinueRow();
+}
+async function handleLogout() {
+  const btn = $('#logout');
+  if (btn) btn.disabled = true;
+  try { closeVideoModal(); } catch (e) {}
+  try { await sb.auth.signOut(); } catch (e) {}
+  clearSupabaseLocalSession();
+  clearSessionUi();
+  showAuth(true);
+  authMsg('');
+  if (btn) btn.disabled = false;
+}
+sb.auth.getSession().then(({ data }) => {
+  showAuth(!data.session);
+  if (data.session) { setUser(data.session.user); loadProg(); }
+  else { clearSessionUi(); loadProg(); }
+});
+sb.auth.onAuthStateChange((_e, session) => {
+  if (session) { authMsg(''); showAuth(false); setUser(session.user); loadProg(); }
+  else { clearSessionUi(); showAuth(true); loadProg(); }
+});
 
 $('#auth-form').addEventListener('submit', async e => {
   e.preventDefault();
@@ -396,4 +524,4 @@ $('#auth-toggle').addEventListener('click', e => {
   $('#auth-toggle').textContent = login ? 'Cadastre-se agora' : 'Entre';
   authMsg('');
 });
-$('#logout').addEventListener('click', async () => { await sb.auth.signOut(); ME = null; PROG.clear(); const c = $('#cont-row'); if (c) c.remove(); showAuth(true); });
+$('#logout').addEventListener('click', handleLogout);
