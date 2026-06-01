@@ -262,24 +262,36 @@ function open(v) {
   const vaq = $('#modal-vaq');
   if (isPixel) { vaq.hidden = false; vaq.href = 'https://www.vakinha.com.br/6121811'; }
   else vaq.hidden = true;
-  const desc = META[v.id] && META[v.id][1], dt = $('#desc-toggle'), dd = $('#modal-desc');
-  dd.hidden = true; dt.textContent = 'Mostrar descrição ▾';
-  dt.hidden = !desc;
-  dd.innerHTML = desc ? linkify(desc) : '';
+  // barra de progresso
+  const prog = PROG.get(v.id);
+  const pb = $('#progress-bar'), pf = $('#progress-fill'), pt = $('#progress-text');
+  if (prog && prog.position > 15 && prog.position / prog.duration < 0.95) {
+    pb.hidden = false; pt.hidden = false;
+    const pct = (prog.position / prog.duration * 100).toFixed(1);
+    pf.style.width = pct + '%';
+    const remain = Math.ceil(prog.duration - prog.position);
+    pt.textContent = `Tempo restante: ${fmtDur(remain)}`;
+  } else { pb.hidden = true; pt.hidden = true; }
+  // descrição preview
+  const desc = META[v.id] && META[v.id][1], dd = $('#modal-desc');
+  if (desc) {
+    const short = desc.length > 200 ? desc.slice(0, 200) + '... ' : desc + ' ';
+    dd.innerHTML = linkify(short) + (desc.length > 200 ? '<span class="more">mais</span>' : '');
+  } else dd.innerHTML = '';
   // relacionados: mesma série em lista vertical (mais antigo no topo); senão aleatório
   const g = GROUPS[VID2G[v.id]], rl = $('#related');
   if (g && g.ids.length > 1) {
-    $('#related-h').textContent = (g.type === 'tema' ? 'Mais de: ' : 'Da mesma série: ') + g.title + ` · ${g.ids.length} vídeos`;
-    rl.className = 'related ep-list';
-    rl.innerHTML = g.ids.map(id => ep(idMap.get(id), id === v.id)).join('');
+    rl.className = 'related';
+    rl.innerHTML = g.ids.map(id => {
+      const x = idMap.get(id);
+      return `<article class="card rcard" data-id="${x.id}">${card(x)}</article>`;
+    }).join('');
   } else {
-    $('#related-h').textContent = 'Você também pode gostar';
     rl.className = 'related';
     rl.innerHTML = [...ALL].sort(() => Math.random() - .5).slice(0, 12)
-      .map(x => `<article class="card" data-id="${x.id}">${card(x)}</article>`).join('');
+      .map(x => `<article class="card rcard" data-id="${x.id}">${card(x)}</article>`).join('');
   }
   modal.hidden = false; modal.scrollTop = 0; document.body.style.overflow = 'hidden';
-  const sel = rl.querySelector('.ep-sel'); if (sel) rl.scrollTop = sel.offsetTop - rl.clientHeight / 2;
   const startAt = Math.floor((PROG.get(v.id) || {}).position || 0);
   player.innerHTML = '<div id="ytp"></div>';
   if (ytReady && window.YT && YT.Player) {
@@ -306,6 +318,14 @@ grid.addEventListener('click', e => { const c = e.target.closest('.rcard'); if (
 $('#modal-close').addEventListener('click', close);
 $('#modal-backdrop').addEventListener('click', close);
 addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) close(); });
+// tabs modal
+$$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+  $$('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const tab = btn.dataset.tab;
+  $('#tab-episodes').hidden = tab !== 'episodes';
+  $('#tab-similar').hidden = tab !== 'similar';
+}));
 
 /* ---------- view switching + nav ---------- */
 const nav = $('#nav'), toTop = $('#to-top');

@@ -103,10 +103,21 @@
         <a id="modal-yt" class="btn-primary" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Assistir no YouTube</a>
         <a id="modal-vaq" class="btn-vaq" target="_blank" rel="noopener" hidden>💚 Apoiar Vaquinha</a>
       </div>
-      <button id="desc-toggle" class="btn-desc" hidden>Mostrar descrição ▾</button>
-      <div id="modal-desc" class="modal-desc" hidden></div>
-      <h4 class="related-h" id="related-h">Mais como este</h4>
-      <div class="related" id="related"></div>
+      <div class="progress-bar" id="progress-bar" hidden>
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="progress-text" id="progress-text" hidden></div>
+      <div id="modal-desc" class="modal-desc-preview"></div>
+      <div class="modal-tabs">
+        <button class="tab-btn active" data-tab="episodes">Episódios</button>
+        <button class="tab-btn" data-tab="similar">Você também pode gostar</button>
+      </div>
+      <div class="tab-content" id="tab-episodes">
+        <div class="related" id="related"></div>
+      </div>
+      <div class="tab-content" hidden id="tab-similar">
+        <p style="color:var(--muted);padding:20px 0">Em breve...</p>
+      </div>
     </div>
   </div>
 </div>

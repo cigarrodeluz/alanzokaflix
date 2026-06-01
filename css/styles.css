@@ -164,6 +164,19 @@ h2,h3,h4{font-weight:800;letter-spacing:-.3px}
 .btn-desc{display:block;width:100%;background:transparent;border:none;color:var(--muted);text-align:left;
   font-family:inherit;font-weight:600;font-size:.9rem;padding:8px 0;cursor:pointer;transition:.2s}
 .btn-desc:hover{color:#fff}
+.progress-bar{width:100%;height:4px;background:#333;border-radius:2px;overflow:hidden;margin:16px 0 8px}
+.progress-fill{height:100%;background:var(--red);transition:width .3s}
+.progress-text{font-size:.9rem;color:var(--muted);margin-bottom:16px}
+.modal-desc-preview{color:#d6d6d6;font-size:.95rem;line-height:1.6;margin-bottom:20px;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.modal-desc-preview .more{color:#fff;cursor:pointer;font-weight:600}
+.modal-desc-preview .more:hover{text-decoration:underline}
+.modal-tabs{display:flex;gap:24px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.tab-btn{background:none;border:none;color:var(--muted);font-family:inherit;font-size:1rem;font-weight:600;
+  padding:12px 0;cursor:pointer;border-bottom:3px solid transparent;transition:.2s}
+.tab-btn.active{color:#fff;border-bottom-color:var(--red)}
+.tab-content{display:block}
+.tab-content[hidden]{display:none}
 @media(max-width:560px){
   .modal-body{padding:16px 20px 24px}
   .modal-title{font-size:1.4rem}
@@ -175,6 +188,7 @@ h2,h3,h4{font-weight:800;letter-spacing:-.3px}
 .modal-desc a{color:#7aa7ff;text-decoration:underline}
 .related-h{font-size:1.15rem;margin:30px 0 16px}
 .related{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.related .rcard{aspect-ratio:16/9}
 /* lista de episódios estilo Netflix */
 .ep-list{display:block;position:relative;max-height:460px;overflow-y:auto;padding-right:6px}
 .ep-list::-webkit-scrollbar{width:8px}.ep-list::-webkit-scrollbar-thumb{background:#333;border-radius:8px}
