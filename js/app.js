@@ -39,7 +39,7 @@ Promise.all([
   $('#search').placeholder = `Buscar entre ${ALL.length.toLocaleString('pt-BR')} vídeos…`;
   if (data.generatedAt) $('#foot-gen').textContent =
     'Acervo atualizado em ' + new Date(data.generatedAt).toLocaleDateString('pt-BR');
-  buildBillboard(); buildRows(); buildSections(); apply(); renderContinue();
+  buildBillboard(); buildRows(); buildSections(); buildPixelRow(); apply(); renderContinue();
   if (!auth.hidden) buildMosaic();
 }).catch(() => { info.textContent = 'Não foi possível carregar o acervo (data/videos.json).'; });
 
@@ -89,6 +89,20 @@ function buildRows() {
   const frag = document.createDocumentFragment();
   defs.forEach(([title, items]) => frag.appendChild(rowEl(title, items)));
   $('#rows').appendChild(frag);
+}
+// fileira fixa: Alanzoka Jogando Fora de Casa (PIXEL STUDIO)
+function buildPixelRow() {
+  const rows = $('#rows'); if (!rows) return;
+  const old = $('#pixel-row'); if (old) old.remove();
+  const ids = ['b-1p2ADqkMo', 'fIDIMCK9jlE'];
+  const vids = ids.map(id => idMap.get(id)).filter(Boolean);
+  if (!vids.length) return;
+  const row = rowEl('Alanzoka: Jogando Fora de Casa <span class="rt-chip jogo">PIXEL STUDIO</span>', vids);
+  row.id = 'pixel-row';
+  const kids = [...rows.children];
+  const contIdx = kids.findIndex(r => r.id === 'cont-row');
+  const target = contIdx >= 0 ? kids[contIdx + 1] : kids[2];
+  if (target) rows.insertBefore(row, target); else rows.appendChild(row);
 }
 // séries/temas + avulsos, ordenados por tamanho (maiores primeiro)
 function buildSections() {
