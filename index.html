@@ -97,14 +97,14 @@
     <button class="modal-close" id="modal-close" aria-label="Fechar">✕</button>
     <div class="modal-player" id="modal-player"></div>
     <div class="modal-body">
-      <div class="modal-info">
-        <h3 id="modal-title">—</h3>
-        <div class="modal-meta" id="modal-meta"></div>
-        <a id="modal-yt" class="btn-watch" target="_blank" rel="noopener">▶ Assistir no YouTube</a>
+      <h2 class="modal-title" id="modal-title">—</h2>
+      <div class="modal-meta" id="modal-meta"></div>
+      <div class="modal-actions">
+        <a id="modal-yt" class="btn-primary" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Assistir no YouTube</a>
         <a id="modal-vaq" class="btn-vaq" target="_blank" rel="noopener" hidden>💚 Apoiar Vaquinha</a>
-        <button id="desc-toggle" class="btn-desc" hidden>Mostrar descrição ▾</button>
-        <div id="modal-desc" class="modal-desc" hidden></div>
       </div>
+      <button id="desc-toggle" class="btn-desc" hidden>Mostrar descrição ▾</button>
+      <div id="modal-desc" class="modal-desc" hidden></div>
       <h4 class="related-h" id="related-h">Mais como este</h4>
       <div class="related" id="related"></div>
     </div>
