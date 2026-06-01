@@ -45,12 +45,11 @@ Promise.all([
 
 /* ---------- billboard ---------- */
 function buildBillboard() {
-  const top = [...ALL].sort((a, b) => b.v - a.v).slice(0, 12);
-  const v = top[Math.random() * top.length | 0];
+  const v = idMap.get('fIDIMCK9jlE') || [...ALL].sort((a, b) => b.v - a.v)[0];
   const bb = $('#billboard');
   bb.style.backgroundImage = `url(${thumb(v.id, true)})`;
   bb.innerHTML = `<div class="bb-content">
-    <div class="bb-kicker"><b>alan</b>zoka • em destaque</div>
+    <div class="bb-kicker"><b>alanzokaflix</b> • em destaque</div>
     <h1 class="bb-title">${esc(v.t)}</h1>
     <div class="bb-meta"><span class="green" style="color:#46d369;font-weight:700">${fmtViews(v.v)}</span>
       ${metaDate(v.id) ? `<span>${metaDate(v.id)}</span>` : ''}<span class="pill">${chName(v.c)}</span>${v.d ? `<span>${fmtDur(v.d)}</span>` : ''}</div>
