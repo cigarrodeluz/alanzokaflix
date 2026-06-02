@@ -149,6 +149,7 @@ function buildPixelRow() {
   if (!vids.length) return;
   const row = rowEl('Alanzoka: Jogando Fora de Casa <span class="rt-chip jogo">PIXEL STUDIO</span>', vids);
   row.id = 'pixel-row';
+  row.classList.add('row-full');
   const kids = [...rows.children];
   const contIdx = kids.findIndex(r => r.id === 'cont-row');
   const target = contIdx >= 0 ? kids[contIdx + 1] : kids[2];
@@ -302,7 +303,7 @@ function renderContinue() {
     .filter(x => x.v).slice(0, 20);
   if (!items.length) return;
   const row = document.createElement('section');
-  row.className = 'row'; row.id = 'cont-row';
+  row.className = 'row row-full'; row.id = 'cont-row';
   row.innerHTML = `<h2 class="row-title">Continuar assistindo</h2>
     <div class="row-wrap"><button class="arrow l" aria-label="Anterior">‹</button>
     <div class="track">${items.map(x => contCard(x.v, x.pct)).join('')}</div>
@@ -325,9 +326,6 @@ function openVideoModal(v) {
   renderContinue();
   const loading = $('#modal-loading'); loading.classList.add('show');
   const modalBox = $('.modal-box'); modalBox.classList.remove('show');
-  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'episodes'));
-  $('#tab-episodes').hidden = false;
-  $('#tab-similar').hidden = true;
   $('#modal-title').textContent = v.t;
   const date = metaDate(v.id);
   $('#modal-meta').innerHTML = `<span class="green">${fmtViews(v.v) || 'Vídeo'}</span>` +
@@ -356,15 +354,23 @@ function openVideoModal(v) {
   } else dd.innerHTML = '';
   // relacionados: mesma série em lista vertical (mais antigo no topo); senão aleatório
   const g = GROUPS[VID2G[v.id]], rl = $('#related');
+  const hasEpisodes = !!(g && g.ids.length > 1);
   const recHtml = [...ALL].filter(x => x.id !== v.id).sort(() => Math.random() - .5).slice(0, 12)
     .map(x => `<button type="button" class="card" data-id="${x.id}">${card(x)}</button>`).join('');
   $('#tab-similar').innerHTML = `<div class="related">${recHtml}</div>`;
-  if (g && g.ids.length > 1) {
+  const episodeTab = $('.tab-btn[data-tab="episodes"]');
+  const similarTab = $('.tab-btn[data-tab="similar"]');
+  if (episodeTab) episodeTab.hidden = !hasEpisodes;
+  if (similarTab) similarTab.classList.toggle('active', !hasEpisodes);
+  if (episodeTab) episodeTab.classList.toggle('active', hasEpisodes);
+  $('#tab-episodes').hidden = !hasEpisodes;
+  $('#tab-similar').hidden = hasEpisodes;
+  if (hasEpisodes) {
     rl.className = 'related ep-list';
     rl.innerHTML = g.ids.map(id => ep(idMap.get(id), id === v.id)).join('');
   } else {
     rl.className = 'related';
-    rl.innerHTML = recHtml;
+    rl.innerHTML = '';
   }
   modal.hidden = false; modal.scrollTop = 0; document.body.style.overflow = 'hidden';
   const startAt = Math.floor((PROG.get(v.id) || {}).position || 0);
