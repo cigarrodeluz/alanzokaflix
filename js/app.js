@@ -10,6 +10,7 @@ const PROG = new Map();
 const HIST = new Map();
 const HISTORY_KEY = 'alanzokaflix:watch-history';
 const HISTORY_LIMIT = 80;
+const PIXEL_EPISODE_IDS = ['b-1p2ADqkMo', 'fIDIMCK9jlE'];
 let state = { q: '', qraw: '', ch: 'all', sort: 'size' };
 
 /* ---------- helpers ---------- */
@@ -31,6 +32,32 @@ const thumb = (id, hq) => `https://i.ytimg.com/vi/${id}/${hq ? 'maxresdefault' :
 const onload = "this.classList.add('loaded');this.parentNode.classList.add('done')";
 const metaHtml = v => [chName(v.c), fmtViews(v.v), metaDate(v.id)].filter(Boolean)
   .map(x => `<span>${x}</span>`).join('<span class="dot"></span>');
+function episodeGroup(v) {
+  const g = GROUPS[VID2G[v.id]];
+  if (g && g.ids.length > 1) return g;
+  if (PIXEL_EPISODE_IDS.includes(v.id)) {
+    const ids = PIXEL_EPISODE_IDS.filter(id => idMap.has(id));
+    if (ids.length > 1) return { title: 'Alanzoka: Jogando Fora de Casa', type: 'pixel', ids };
+  }
+  return null;
+}
+function renderModalDesc(desc) {
+  const dd = $('#modal-desc');
+  dd.classList.remove('expanded');
+  delete dd.dataset.fullDesc;
+  if (!desc) { dd.innerHTML = ''; return; }
+  const needsExpand = desc.length > 220;
+  const short = needsExpand ? desc.slice(0, 220).trim() + '...' : desc;
+  if (needsExpand) dd.dataset.fullDesc = desc;
+  dd.innerHTML = linkify(short) + (needsExpand ? ' <button type="button" class="desc-more" data-desc-more>mais</button>' : '');
+}
+function toggleModalDesc() {
+  const dd = $('#modal-desc'), full = dd.dataset.fullDesc;
+  if (!full) return;
+  const expanded = dd.classList.toggle('expanded');
+  if (expanded) dd.innerHTML = linkify(full) + ' <button type="button" class="desc-more" data-desc-more>menos</button>';
+  else renderModalDesc(full);
+}
 
 function loadLocalHistory() {
   HIST.clear();
@@ -144,8 +171,7 @@ function buildRows() {
 function buildPixelRow() {
   const rows = $('#rows'); if (!rows) return;
   const old = $('#pixel-row'); if (old) old.remove();
-  const ids = ['b-1p2ADqkMo', 'fIDIMCK9jlE'];
-  const vids = ids.map(id => idMap.get(id)).filter(Boolean);
+  const vids = PIXEL_EPISODE_IDS.map(id => idMap.get(id)).filter(Boolean);
   if (!vids.length) return;
   const row = rowEl('Alanzoka: Jogando Fora de Casa <span class="rt-chip jogo">PIXEL STUDIO</span>', vids);
   row.id = 'pixel-row';
@@ -231,7 +257,7 @@ function ep(v, sel) {
     <div class="ep-thumb"><img loading="lazy" decoding="async" src="${thumb(v.id)}" alt="" onload="${onload}" onerror="this.style.opacity=1">
       ${v.d ? `<span class="badge">${fmtDur(v.d)}</span>` : ''}${sel ? '<span class="ep-now">▶ assistindo</span>' : ''}</div>
     <div class="ep-info"><div class="ep-title">${esc(v.t)}</div><div class="ep-meta">${meta}</div>
-      ${d ? `<p class="ep-desc">${esc(d)}</p>` : ''}</div>
+    </div>${d ? `<p class="ep-desc">${esc(d)}</p>` : ''}
   </button>`;
 }
 
@@ -336,25 +362,18 @@ function openVideoModal(v) {
   const vaq = $('#modal-vaq');
   if (isPixel) { vaq.hidden = false; vaq.href = 'https://www.vakinha.com.br/6121811'; }
   else vaq.hidden = true;
-  // barra de progresso
   const prog = PROG.get(v.id);
   const pb = $('#progress-bar'), pf = $('#progress-fill'), pt = $('#progress-text');
-  if (prog && prog.position > 15 && prog.position / prog.duration < 0.95) {
-    pb.hidden = false; pt.hidden = false;
-    const pct = (prog.position / prog.duration * 100).toFixed(1);
-    pf.style.width = pct + '%';
-    const remain = Math.ceil(prog.duration - prog.position);
-    pt.textContent = `Tempo restante: ${fmtDur(remain)}`;
-  } else { pb.hidden = true; pt.hidden = true; }
-  // descrição preview
-  const desc = META[v.id] && META[v.id][1], dd = $('#modal-desc');
-  if (desc) {
-    const short = desc.length > 200 ? desc.slice(0, 200) + '... ' : desc + ' ';
-    dd.innerHTML = linkify(short) + (desc.length > 200 ? '<span class="more">mais</span>' : '');
-  } else dd.innerHTML = '';
-  // relacionados: mesma série em lista vertical (mais antigo no topo); senão aleatório
-  const g = GROUPS[VID2G[v.id]], rl = $('#related');
-  const hasEpisodes = !!(g && g.ids.length > 1);
+  const dur = Number((prog && prog.duration) || v.d) || 0;
+  const pos = Math.max(0, Number((prog && prog.position) || 0));
+  if (dur > 0) {
+    const pct = pos > 0 ? Math.min(100, pos / dur * 100) : 0;
+    pb.hidden = false; pt.hidden = false; pf.style.width = pct.toFixed(1) + '%';
+    pt.textContent = `Tempo restante: ${fmtDur(Math.max(0, Math.ceil(dur - pos)))}`;
+  } else { pb.hidden = true; pt.hidden = true; pf.style.width = '0%'; }
+  renderModalDesc(META[v.id] && META[v.id][1]);
+  const g = episodeGroup(v), rl = $('#related');
+  const hasEpisodes = !!g;
   const recHtml = [...ALL].filter(x => x.id !== v.id).sort(() => Math.random() - .5).slice(0, 12)
     .map(x => `<button type="button" class="card" data-id="${x.id}">${card(x)}</button>`).join('');
   $('#tab-similar').innerHTML = `<div class="related">${recHtml}</div>`;
@@ -408,6 +427,8 @@ grid.addEventListener('click', e => { const c = e.target.closest('.rcard'); if (
 $('#modal-close').addEventListener('click', closeVideoModal);
 $('#modal-backdrop').addEventListener('click', closeVideoModal);
 document.addEventListener('click', e => {
+  const descMore = e.target.closest('[data-desc-more]');
+  if (descMore) { e.preventDefault(); e.stopPropagation(); toggleModalDesc(); return; }
   const closeBtn = e.target.closest('[data-modal-close],#modal-close');
   if (closeBtn) { e.preventDefault(); e.stopPropagation(); closeVideoModal(); return; }
   const related = e.target.closest('#related [data-id],#tab-similar [data-id]');
