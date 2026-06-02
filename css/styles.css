@@ -54,7 +54,8 @@ h2,h3,h4{font-weight:800;letter-spacing:-.3px}
 .rows{position:relative;z-index:2;margin-top:-6vh;padding-bottom:30px}
 .row{margin:0 0 6px;padding:14px 0}
 .row-full{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}
-.row-full .row-title,.row-full .track{padding-left:clamp(16px,4vw,52px);padding-right:clamp(16px,4vw,52px)}
+.row-full .row-title{padding-left:clamp(16px,4vw,52px);padding-right:clamp(16px,4vw,52px)}
+.row-full .track{padding-left:0;padding-right:0}
 .row-title{font-size:clamp(1.05rem,2vw,1.4rem);margin:0 0 12px;padding:0 clamp(16px,4vw,52px)}
 .row-wrap{position:relative}
 .track{display:flex;gap:8px;overflow-x:auto;scroll-behavior:smooth;padding:6px clamp(16px,4vw,52px);
