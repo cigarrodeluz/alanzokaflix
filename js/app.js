@@ -252,12 +252,11 @@ function descBrief(id) {
 function ep(v, sel) {
   if (!v) return '';
   const meta = [metaDate(v.id), fmtDur(v.d), fmtViews(v.v)].filter(Boolean).join(' · ');
-  const d = descBrief(v.id);
   return `<button class="ep${sel ? ' ep-sel' : ''}" data-id="${v.id}">
     <div class="ep-thumb"><img loading="lazy" decoding="async" src="${thumb(v.id)}" alt="" onload="${onload}" onerror="this.style.opacity=1">
       ${v.d ? `<span class="badge">${fmtDur(v.d)}</span>` : ''}${sel ? '<span class="ep-now">▶ assistindo</span>' : ''}</div>
     <div class="ep-info"><div class="ep-title">${esc(v.t)}</div><div class="ep-meta">${meta}</div>
-    </div>${d ? `<p class="ep-desc">${esc(d)}</p>` : ''}
+    </div>
   </button>`;
 }
 
